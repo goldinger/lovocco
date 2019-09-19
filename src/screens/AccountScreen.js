@@ -1,12 +1,20 @@
 import React from 'react';
-import {AsyncStorage, Button, Text, View} from 'react-native';
+import {AsyncStorage, Button, View} from 'react-native';
 
 class AccountScreen extends React.Component {
   static navigationOptions = {
     title: 'Welcome to the app!',
   };
 
-  render() {
+  state = {
+      userToken: null,
+  };
+
+  componentDidMount() {
+      AsyncStorage.getItem('userToken', null).then((userToken) => {this.setState({userToken})});
+  }
+
+    render() {
     return (
         <View>
           <Button title="Show me more of the app" onPress={this._showMoreApp} />

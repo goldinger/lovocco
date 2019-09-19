@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "jetifier": "^1.6.4",
+    "js-base64": "^2.5.1",
     "react": "16.8.6",
     "react-native": "0.60.5",
     "react-native-gesture-handler": "^1.4.1",

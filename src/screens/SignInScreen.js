@@ -3,11 +3,11 @@ import {
     View,
     Text,
     TouchableOpacity,
-    AsyncStorage,
-    TextInput,
     StyleSheet
 } from 'react-native';
-import { Base64 } from 'js-base64';
+import { Input } from 'react-native-elements';
+import AsyncStorage from '@react-native-community/async-storage';
+import {Base64} from 'js-base64';
 
 class SignInScreen extends React.Component {
     static navigationOptions = {
@@ -17,27 +17,33 @@ class SignInScreen extends React.Component {
     state = {
         email: null,
         password: null,
+        emailError: null,
+        passwordError: null
     };
 
     render() {
         return (
             <View style={styles.container}>
-                <TextInput style={styles.inputBox}
-                           onChangeText={(email) => this.setState({email})}
-                           underlineColorAndroid='rgba(0,0,0,0)'
-                           placeholder="Email"
-                           placeholderTextColor = "#002f6c"
-                           selectionColor="#fff"
-                           keyboardType="email-address"
-                           onSubmitEditing={()=> this.password.focus()}/>
-
-                <TextInput style={styles.inputBox}
-                           onChangeText={(password) => this.setState({password})}
-                           underlineColorAndroid='rgba(0,0,0,0)'
-                           placeholder="Password"
-                           secureTextEntry={true}
-                           placeholderTextColor = "#002f6c"
-                           ref={(input) => this.password = input}
+                <Input
+                    label="Adresse email"
+                    inputStyle={styles.inputBox}
+                    underlineColorAndroid='rgba(0,0,0,0)'
+                    selectionColor="#fff"
+                    keyboardType="email-address"
+                    onChangeText={(email) => this.setState({email})}
+                    errorMessage={this.state.emailError}
+                    errorStyle={{color: 'red'}}
+                    onSubmitEditing={()=> this.password.focus()}/>
+                <Input
+                    label="Mot de passe"
+                    inputStyle={styles.inputBox}
+                    onChangeText={(password) => this.setState({password})}
+                    underlineColorAndroid='rgba(0,0,0,0)'
+                    secureTextEntry={true}
+                    ref={(input) => this.password = input}
+                    errorMessage={this.state.passwordError}
+                    errorStyle={{color: 'red'}}
+                    onSubmitEditing={this._signInAsync}
                 />
 
                 <TouchableOpacity style={styles.button} onPress={this._signInAsync}>
@@ -59,13 +65,19 @@ class SignInScreen extends React.Component {
                 },
                 body: JSON.stringify({email: component.state.email, password: Base64.encode(component.state.password)})
             }
-        ).then((response) => response.json())
-            .then((responseJson) => {
+        )
+            .then(response => response.json())
+            .then(responseJson => {
                 if (responseJson.token) {
                     AsyncStorage.setItem('userToken', responseJson.token);
                     component.props.navigation.navigate('App');
+                } else if (responseJson.status === 'KO') {
+                    component.setState({emailError: responseJson.message})
                 }
-            });
+            })
+            .catch((error) => {
+                component.setState({emailError: error})
+            })
     };
 }
 

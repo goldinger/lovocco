@@ -47,7 +47,7 @@ const AuthStack = createStackNavigator({SignIn: SignInScreen, SignUp: SignUpScre
 export default createAppContainer(
     createSwitchNavigator(
         {
-        Init: InitScreen,
+            Init: InitScreen,
             AuthLoading: AuthLoadingScreen,
             App: AppStack,
             Auth: AuthStack,

@@ -5,12 +5,16 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    Image,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
 import AsyncStorage from '@react-native-community/async-storage';
 import DatePicker from 'react-native-datepicker';
+import ImagePicker from 'react-native-image-picker';
+import { X_API_URL } from 'react-native-dotenv';
+import Toast from 'react-native-root-toast';
 
 export default class AccountScreen extends React.Component {
     static navigationOptions = {
@@ -20,7 +24,10 @@ export default class AccountScreen extends React.Component {
 
     state = {
         userToken: null,
-        dataLoaded: false
+        dataLoaded: false,
+        error: null,
+        genderList: [],
+        cityList: []
     };
 
 
@@ -32,55 +39,124 @@ export default class AccountScreen extends React.Component {
                     component.props.navigation.navigate('Auth')
                 } else {
                     component.setState({userToken});
-                    fetch('https://lovocco-api.sghir.me/myProfile?token=' + userToken)
-                        .then(
-                            response => response.json()
-                        ).then(
-                        profile => {
-                            if (profile.status === 'KO') {
-                                component._signOutAsync()
-                            }
-                            if ( !profile.configured ) {
-                                component.props.navigation.navigate('Init')
-                            }
-                            component.setState(profile);
-                            component.setState({dataLoaded: true})
+                    fetch(X_API_URL + 'lovers/me', {
+                        method: 'GET',
+                        headers: {
+                            Authorization: 'Token ' + userToken
                         }
-                    )
+                    }).then(
+                        response => {
+                            if (response.status === 200) {
+                                response.json().then( responseJson => {
+                                        component.setState(responseJson);
+                                        component.setState({dataLoaded: true});
+                                    }
+                                )
+                            }
+                            else {
+                                response.json().then(j => component.setState({error: j.message}))
+                            }
+                        }
+                    ).catch(error => component.setState({error}))
                 }
-            });
+            })
+            .catch(error => component.setState({error}));
+        fetch(X_API_URL + 'genders').then(
+            response => response.json()
+        ).then(
+            genderList => component.setState({genderList})
+        );
+        fetch(X_API_URL + 'citys').then(
+            response => response.json()
+        ).then(
+            cityList => component.setState({cityList})
+        )
     }
 
     _validate() {
-        if (this.state.userToken && this.state.name && this.state.birthDate && this.state.city && this.state.gender && this.state.targetGender && this.state.ageMin && this.state.ageMax) {
+        if (this.state.userToken) {
             let body = {
                 name: this.state.name,
-                birthDate: this.state.birthDate,
+                birth_date: this.state.birth_date,
                 city: this.state.city,
                 gender: this.state.gender,
-                targetGender: this.state.targetGender,
+                target_gender: this.state.target_gender,
                 description: this.state.description,
-                ageMin: this.state.ageMin,
-                ageMax: this.state.ageMax
+                age_min: this.state.age_min,
+                age_max: this.state.age_max
             };
             let component = this;
-            fetch('https://lovocco-api.sghir.me/myProfile?token=' + this.state.userToken, {
-                method: 'POST',
-                mode: 'no-cors',
+            // send user data
+            fetch(X_API_URL + 'lovers/me', {
+                method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Token ' + this.state.userToken
                 },
+                // body: component.createFormData(component.photo, body)
                 body: JSON.stringify(body)
             })
-                .then(response => response.json())
-                .then((responseJson) => {
-                    if (responseJson.status === 'OK') {
-                        component.props.navigation.navigate('Swipe')
-                    } else {
-                        console.warn('EROOR')
+                .then(response => {
+                    if (response.status === 200) {
+                        Toast.show('Profile updated')
                     }
-                }).catch((error) => console.warn(error))
+                    else {
+                        response.json().then(responseJson => component.setState({error: responseJson}))
+                    }
+                })
+                .catch((error) => component.setState({error}));
+            // send photo
+            if (this.state.photo) {
+                fetch(X_API_URL + 'photos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': 'Token ' + this.state.userToken
+                    },
+                    body: this.createFormData(this.state.photo)
+                })
+                    .then(response => {
+                        if (response.status === 200) {
+                            Toast.show('Photo updated')
+                        } else {
+                            console.warn(response);
+                            // response.json().then(responseJson => component.setState({error: responseJson}))
+                        }
+                    })
+                    .catch((error) => component.setState({error}));
+            }
         }
+    }
+
+    createFormData(photo) {
+        const data = new FormData();
+
+        data.append('image', {
+            name: photo.fileName,
+            type: photo.type,
+            uri:
+                Platform.OS === 'android' ? photo.uri : photo.uri.replace('file://', ''),
+        });
+        return data;
+    }
+
+    _chose_photo() {
+        const options = {
+            title: 'Select Picture',
+            storageOptions: {
+                skipBackup: true,
+                path: 'images',
+
+            },
+            maxWidth: 500,
+            maxHeight: 500,
+            quality: 0.5
+        };
+        ImagePicker.launchImageLibrary(options, response => {
+            if (response.uri) {
+                this.setState({ photo: response });
+            }
+        });
     }
 
     render() {
@@ -88,6 +164,10 @@ export default class AccountScreen extends React.Component {
             <View style={{width: '100%', height: '100%'}}>
                 { this.state.dataLoaded && <KeyboardAvoidingView style={styles.container}>
                     <ScrollView style={{width: '100%'}} contentContainerStyle={{alignItems: 'center'}}>
+                        { this.state.photo && <Image source={{ uri: this.state.photo.uri }} style={{width: 220, height: 300}} /> }
+                        <TouchableOpacity style={styles.button} onPress={this._chose_photo.bind(this)}>
+                            <Text style={styles.buttonText}>Choisir une photo</Text>
+                        </TouchableOpacity>
                         <View>
                             <Text style={styles.label}>Prénom</Text>
                             <TextInput
@@ -105,23 +185,11 @@ export default class AccountScreen extends React.Component {
                                         borderColor: 'black'
                                     }
                                 }}
-                                date={this.state.birthDate}
+                                date={this.state.birth_date}
                                 mode="date"
                                 confirmBtnText="Confirmer"
                                 cancelBtnText="Annuler"
-                                onDateChange={(birthDate) => {this.setState({birthDate})}}/>
-                        </View>
-
-                        <View>
-                            <Text style={styles.label}>Localisation</Text>
-                            <Picker
-                                style={styles.textInput}
-                                selectedValue={this.state.city}
-                                onValueChange={(city) => this.setState({city})}
-                            >
-                                <Picker.Item label="Paris" value="paris"/>
-                                <Picker.Item label="Lille" value="lille"/>
-                            </Picker>
+                                onDateChange={(birth_date) => {this.setState({birth_date})}}/>
                         </View>
 
                         <View>
@@ -131,47 +199,70 @@ export default class AccountScreen extends React.Component {
                                 selectedValue={this.state.gender}
                                 onValueChange={(gender) => this.setState({gender})}
                             >
-                                <Picker.Item label="Homme" value="m"/>
-                                <Picker.Item label="Femme" value="f"/>
+                                {
+                                    this.state.genderList.map(item => <Picker.Item key={item.id} label={item.label} value={item.id}/>)
+                                }
                             </Picker>
+                            { this.state.genderError && <Text style={{color: "red"}}>{this.state.genderError}</Text> }
+                        </View>
+
+                        <View>
+                            <Text style={styles.label}>Localisation</Text>
+                            <Picker
+                                style={styles.textInput}
+                                selectedValue={this.state.city}
+                                onValueChange={(city) => this.setState({city})}
+                            >
+                                {
+                                    this.state.cityList.map(item => <Picker.Item key={item.id} label={item.name} value={item.id}/>)
+                                }
+                            </Picker>
+                            { this.state.cityError && <Text style={{color: "red"}}>{this.state.cityError}</Text> }
                         </View>
                         <View>
                             <Text style={styles.label}>Courte description</Text>
                             <TextInput
                                 style={styles.textInput}
                                 value={this.state.description}
+                                multiline
                                 onChangeText={(description) => this.setState({description})}/>
                         </View>
                         <View>
                             <Text style={styles.label}>Age minimum recherché</Text>
                             <TextInput
                                 style={styles.textInput}
-                                value={this.state.ageMin ? this.state.ageMin.toString() : ""}
+                                value={this.state.age_min ? this.state.age_min.toString() : ""}
                                 keyboardType="numeric"
-                                onChangeText={(age) => this.setState({ageMin: parseInt(age)})}/>
+                                onChangeText={(age) => this.setState({age_min: parseInt(age)})}/>
                         </View>
                         <View>
                             <Text style={styles.label}>Age maximum recherché</Text>
                             <TextInput
                                 style={styles.textInput}
-                                value={this.state.ageMax ? this.state.ageMax.toString(): ""}
+                                value={this.state.age_max ? this.state.age_max.toString(): ""}
                                 keyboardType="numeric"
-                                onChangeText={(age) => this.setState({ageMax: parseInt(age)})}/>
+                                onChangeText={(age) => this.setState({age_max: parseInt(age)})}/>
                         </View>
                         <View>
                             <Text style={styles.label}>Sexe recherché</Text>
                             <Picker
                                 style={styles.textInput}
-                                selectedValue={this.state.targetGender}
-                                onValueChange={(targetGender) => this.setState({targetGender})}
+                                selectedValue={this.state.target_gender}
+                                onValueChange={(target_gender) => this.setState({target_gender})}
                             >
-                                <Picker.Item label="Homme" value="m"/>
-                                <Picker.Item label="Femme" value="f"/>
+                                {
+                                    this.state.genderList.map(item => <Picker.Item key={item.id} label={item.label} value={item.id}/>)
+                                }
                             </Picker>
+                            { this.state.target_genderError && <Text style={{color: "red"}}>{this.state.target_genderError}</Text> }
                         </View>
                     </ScrollView>
+                    { this.state.error && <Text style={{color: 'red'}}>{this.state.error}</Text>}
                     <TouchableOpacity style={styles.button} onPress={this._validate.bind(this)}>
                         <Text style={styles.buttonText}>Enregitrer les modifications</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.button} onPress={this._signOutAsync.bind(this)}>
+                        <Text style={styles.buttonText}>Se deconnecter</Text>
                     </TouchableOpacity>
                 </KeyboardAvoidingView>
                 }

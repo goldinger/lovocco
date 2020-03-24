@@ -1,11 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View, Dimensions, Image, Animated, PanResponder } from 'react-native';
+import {StyleSheet, Text, View, Dimensions, Image, Animated, PanResponder, TouchableOpacity} from 'react-native';
 import { X_API_URL, X_MEDIA_URL } from 'react-native-dotenv'
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SCREEN_WIDTH = Dimensions.get('window').width;
-import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-community/async-storage';
 import Toast from 'react-native-root-toast';
+import SwipeCard from '../components/SwipeCard';
+
 
 export default class SwipeScreen extends React.Component {
 
@@ -67,10 +68,14 @@ export default class SwipeScreen extends React.Component {
             }
         }).then(response => {
             if (response.status === 200) {
-                Toast.show('LIKE')
+                response.json().then(responseJson => {
+                    if (responseJson.match) {
+                        Toast.show("It's a match !")
+                    }
+                });
             }
             else {
-                console.warn(response)
+                console.warn(response);
             }
         }).catch(error => console.warn(error))
     }
@@ -95,6 +100,7 @@ export default class SwipeScreen extends React.Component {
     componentDidMount() {
         let component = this;
         this.PanResponder = PanResponder.create({
+            onMoveShouldSetPanResponder: (evt, gestureState) => true,
             onStartShouldSetPanResponder: (evt, gestureState) => true,
             onPanResponderMove: (evt, gestureState) => {
 
@@ -159,41 +165,28 @@ export default class SwipeScreen extends React.Component {
 
     renderUsers = () => {
         return this.state.users.map((item, i) => {
-            let photoUrl;
-            if (item.photos.length > 0) {
-                photoUrl = X_MEDIA_URL + item.photos[0]
-            }
-            else {
-                photoUrl = "https://images-na.ssl-images-amazon.com/images/G/01/author-pages/no-profile-image-placeholder-na._CB484118601_.png"
-            }
-
+            let photos = item.photos.map((item) => (X_MEDIA_URL + item));
             if (i < this.state.currentIndex) {
                 return null
             }
             else if (i === this.state.currentIndex) {
-
                 return (
                     <Animated.View
                         {...this.PanResponder.panHandlers}
-                        key={item.id} style={[this.rotateAndTranslate, { height: SCREEN_HEIGHT - 120, width: SCREEN_WIDTH, padding: 10, position: 'absolute' }]}>
-
+                        key={item.id}
+                        style={[this.rotateAndTranslate, { height: SCREEN_HEIGHT - 120, width: SCREEN_WIDTH, padding: 10, position: 'absolute' }]}>
                         <Animated.View style={{ opacity: this.likeOpacity, transform: [{ rotate: '-30deg' }], position: 'absolute', top: 50, left: 40, zIndex: 1000 }}>
-                            <Text style={{ borderWidth: 1, borderColor: 'green', color: 'green', fontSize: 32, fontWeight: '800', padding: 10 }}>LIKE</Text>
+                            <Text style={{ borderWidth: 1, borderRadius: 25, borderColor: 'green', color: 'green', fontSize: 32, fontWeight: '800', padding: 10 }}>LIKE</Text>
                         </Animated.View>
 
                         <Animated.View style={{ opacity: this.dislikeOpacity, transform: [{ rotate: '30deg' }], position: 'absolute', top: 50, right: 40, zIndex: 1000 }}>
-                            <Text style={{ borderWidth: 1, borderColor: 'red', color: 'red', fontSize: 32, fontWeight: '800', padding: 10 }}>NOPE</Text>
+                            <Text style={{ borderWidth: 1,borderRadius: 25, borderColor: 'red', color: 'red', fontSize: 32, fontWeight: '800', padding: 10 }}>NOPE</Text>
                         </Animated.View>
-
-                        <View style={{ flex: 1, height: null, width: null, resizeMode: 'cover', borderRadius: 20 }}>
-                            <Image
-                                style={{ flex: 1, height: null, width: null, resizeMode: 'cover', borderRadius: 20 }}
-                                source={{uri: photoUrl}} />
-                            <Text style={{position: "absolute", bottom: 20, left: 20, fontSize: 25, color: "white", fontWeight: "bold"}}>{item.name}</Text>
-                            <Text style={{position: "absolute", bottom: 20, right: 20, fontSize: 25, color: "white", fontWeight: "bold"}}>{item.age}</Text>
-                        </View>
-
-
+                        <SwipeCard
+                            photos={photos}
+                            name={item.name}
+                            description={item.description}
+                            age={item.age} />
                     </Animated.View>
                 )
             }
@@ -201,28 +194,17 @@ export default class SwipeScreen extends React.Component {
                 return (
                     <Animated.View
                         {...this.PanResponder.panHandlers}
-                        key={item.id} style={[{
-                        opacity: this.nextCardOpacity,
-                        transform: [{ scale: this.nextCardScale }],
-                        height: SCREEN_HEIGHT - 120, width: SCREEN_WIDTH, padding: 10, position: 'absolute'
-                    }]}>
-
-                        <Animated.View style={{ opacity: 0, transform: [{ rotate: '-30deg' }], position: 'absolute', top: 50, left: 40, zIndex: 1000 }}>
-                            <Text style={{ borderWidth: 1, borderColor: 'green', color: 'green', fontSize: 32, fontWeight: '800', padding: 10 }}>LIKE</Text>
-                        </Animated.View>
-
-                        <Animated.View style={{ opacity: 0, transform: [{ rotate: '30deg' }], position: 'absolute', top: 50, right: 40, zIndex: 1000 }}>
-                            <Text style={{ borderWidth: 1, borderColor: 'red', color: 'red', fontSize: 32, fontWeight: '800', padding: 10 }}>NOPE</Text>
-                        </Animated.View>
-
-                        <View style={{ flex: 1, height: null, width: null, resizeMode: 'cover', borderRadius: 20 }}>
-                            <Image
-                                style={{ flex: 1, height: null, width: null, resizeMode: 'cover', borderRadius: 20 }}
-                                source={{uri: photoUrl}} />
-                            <Text style={{position: "absolute", bottom: 20, left: 20, fontSize: 25, color: "white", fontWeight: "bold"}}>{item.name}</Text>
-                            <Text style={{position: "absolute", bottom: 20, right: 20, fontSize: 25, color: "white", fontWeight: "bold"}}>{item.age}</Text>
-                        </View>
-
+                        key={item.id}
+                        style={[{
+                            opacity: this.nextCardOpacity,
+                            transform: [{ scale: this.nextCardScale }],
+                            height: SCREEN_HEIGHT - 120, width: SCREEN_WIDTH, padding: 10, position: 'absolute'
+                        }]}>
+                        <SwipeCard
+                            photos={photos}
+                            name={item.name}
+                            description={item.description}
+                            age={item.age} />
                     </Animated.View>
                 )
             }
@@ -233,16 +215,12 @@ export default class SwipeScreen extends React.Component {
         return (
             <View style={{ flex: 1 }}>
                 <View style={{ height: 60 }}>
-
                 </View>
                 <View style={{ flex: 1 }}>
                     {this.state.dataLoaded && this.renderUsers()}
                 </View>
                 <View style={{ height: 60 }}>
-
                 </View>
-
-
             </View>
 
         );

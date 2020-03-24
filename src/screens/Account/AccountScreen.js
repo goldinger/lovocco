@@ -5,31 +5,87 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    Image,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
-import AsyncStorage from '@react-native-community/async-storage';
+import AsyncStorage from '@react-native-community/async-storage/types';
 import DatePicker from 'react-native-datepicker';
-import ImagePicker from 'react-native-image-picker';
+import ImagePicker from 'react-native-image-picker/lib/typescript';
 import { X_API_URL } from 'react-native-dotenv';
-import Toast from 'react-native-root-toast';
+import Toast from 'react-native-root-toast/index';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import PhotoGallery from '../../components/PhotoGalery';
+
 
 export default class AccountScreen extends React.Component {
-    static navigationOptions = {
-        title: 'Account',
-    };
+
+    static navigationOptions = ({navigation}) => ({
+        headerLeft: <View style={{flexDirection: "row",justifyContent: "flex-end",paddingLeft:15}}>
+            <TouchableOpacity onPress={navigation.getParam('_signOut')}>
+                <Icon type="font-awesome" name="power-off" size={30} color="gray" />
+            </TouchableOpacity>
+        </View>,
+        headerRight: <View style={{flexDirection: "row",justifyContent: "flex-end",paddingRight:15}}>
+            <TouchableOpacity onPress={navigation.getParam('_validate')}>
+                <Icon type="font-awesome" name="check" size={30} color="gray" />
+            </TouchableOpacity>
+        </View>
+    });
 
 
     state = {
         userToken: null,
-        dataLoaded: false,
+        photos : null,
+        user: null,
         error: null,
         genderList: [],
         cityList: []
     };
 
+
+    refresh() {
+        let component = this;
+        let userToken = this.state.userToken;
+        fetch(X_API_URL + 'lovers/me', {
+            method: 'GET',
+            headers: {
+                Authorization: 'Token ' + userToken
+            }
+        }).then(
+            response => {
+                if (response.status === 200) {
+                    response.json().then( responseJson => {
+                            component.setState({user: responseJson});
+                        }
+                    )
+                }
+                else {
+                    response.json().then(j => component.setState({error: j.message}))
+                }
+            }
+        ).catch(error => component.setState({error}));
+
+        fetch(X_API_URL + 'photos', {
+            method: 'GET',
+            headers: {
+                Authorization: 'Token ' + userToken
+            }
+        })
+            .then(
+                response => {
+                    if (response.status === 200) {
+                        response.json().then( photos => {
+                                component.setState({photos});
+                            }
+                        )
+                    }
+                    else {
+                        response.json().then(j => component.setState({error: j.message}))
+                    }
+                })
+            .catch(error => component.setState({error}))
+    }
 
     componentDidMount() {
         let component = this;
@@ -38,26 +94,7 @@ export default class AccountScreen extends React.Component {
                 if (userToken == null) {
                     component.props.navigation.navigate('Auth')
                 } else {
-                    component.setState({userToken});
-                    fetch(X_API_URL + 'lovers/me', {
-                        method: 'GET',
-                        headers: {
-                            Authorization: 'Token ' + userToken
-                        }
-                    }).then(
-                        response => {
-                            if (response.status === 200) {
-                                response.json().then( responseJson => {
-                                        component.setState(responseJson);
-                                        component.setState({dataLoaded: true});
-                                    }
-                                )
-                            }
-                            else {
-                                response.json().then(j => component.setState({error: j.message}))
-                            }
-                        }
-                    ).catch(error => component.setState({error}))
+                    component.setState({userToken}, () => component.refresh());
                 }
             })
             .catch(error => component.setState({error}));
@@ -71,19 +108,20 @@ export default class AccountScreen extends React.Component {
         ).then(
             cityList => component.setState({cityList})
         )
+        this.props.navigation.setParams({_validate: this._validate.bind(this), _signOut: this._signOutAsync.bind(this)})
     }
 
     _validate() {
         if (this.state.userToken) {
             let body = {
-                name: this.state.name,
-                birth_date: this.state.birth_date,
-                city: this.state.city,
-                gender: this.state.gender,
-                target_gender: this.state.target_gender,
-                description: this.state.description,
-                age_min: this.state.age_min,
-                age_max: this.state.age_max
+                name: this.state.user.name,
+                birth_date: this.state.user.birth_date,
+                city: this.state.user.city,
+                gender: this.state.user.gender,
+                target_gender: this.state.user.target_gender,
+                description: this.state.user.description,
+                age_min: this.state.user.age_min,
+                age_max: this.state.user.age_max
             };
             let component = this;
             // send user data
@@ -98,33 +136,14 @@ export default class AccountScreen extends React.Component {
             })
                 .then(response => {
                     if (response.status === 200) {
-                        Toast.show('Profile updated')
+                        Toast.show('Profile updated');
+                        component.refresh()
                     }
                     else {
                         response.json().then(responseJson => component.setState({error: responseJson}))
                     }
                 })
                 .catch((error) => component.setState({error}));
-            // send photo
-            if (this.state.photo) {
-                fetch(X_API_URL + 'photos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                        'Authorization': 'Token ' + this.state.userToken
-                    },
-                    body: this.createFormData(this.state.photo)
-                })
-                    .then(response => {
-                        if (response.status === 200) {
-                            Toast.show('Photo updated')
-                        } else {
-                            console.warn(response);
-                            // response.json().then(responseJson => component.setState({error: responseJson}))
-                        }
-                    })
-                    .catch((error) => component.setState({error}));
-            }
         }
     }
 
@@ -140,7 +159,8 @@ export default class AccountScreen extends React.Component {
         return data;
     }
 
-    _chose_photo() {
+    _add_photo() {
+        let component = this;
         const options = {
             title: 'Select Picture',
             storageOptions: {
@@ -152,27 +172,44 @@ export default class AccountScreen extends React.Component {
             maxHeight: 500,
             quality: 0.5
         };
-        ImagePicker.launchImageLibrary(options, response => {
-            if (response.uri) {
-                this.setState({ photo: response });
+        ImagePicker.launchImageLibrary(options, photo => {
+            if (photo.uri) {
+                fetch(X_API_URL + 'photos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': 'Token ' + component.state.userToken
+                    },
+                    body: this.createFormData(photo)
+                })
+                    .then(response => {
+                        if (response.status === 200) {
+                            component.refresh();
+
+                        } else {
+                            Toast.show('Photo update failed')
+                        }
+                    })
+                    .catch((error) => component.setState({error}));
+
             }
         });
     }
 
+
+
     render() {
         return (
             <View style={{width: '100%', height: '100%'}}>
-                { this.state.dataLoaded && <KeyboardAvoidingView style={styles.container}>
+                { this.state.error && <Text style={{color: 'red'}}>{this.state.error}</Text>}
+                { this.state.user && <KeyboardAvoidingView style={styles.container}>
                     <ScrollView style={{width: '100%'}} contentContainerStyle={{alignItems: 'center'}}>
-                        { this.state.photo && <Image source={{ uri: this.state.photo.uri }} style={{width: 220, height: 300}} /> }
-                        <TouchableOpacity style={styles.button} onPress={this._chose_photo.bind(this)}>
-                            <Text style={styles.buttonText}>Choisir une photo</Text>
-                        </TouchableOpacity>
+                        {this.state.photos && <PhotoGallery photos={this.state.photos} onPressAdd={this._add_photo.bind(this)}/>}
                         <View>
                             <Text style={styles.label}>Prénom</Text>
                             <TextInput
                                 style={styles.textInput}
-                                value={this.state.name}
+                                value={this.state.user.name}
                                 onChangeText={(name) => this.setState({name})}/>
                         </View>
                         <View>
@@ -185,7 +222,7 @@ export default class AccountScreen extends React.Component {
                                         borderColor: 'black'
                                     }
                                 }}
-                                date={this.state.birth_date}
+                                date={this.state.user.birth_date}
                                 mode="date"
                                 confirmBtnText="Confirmer"
                                 cancelBtnText="Annuler"
@@ -196,7 +233,7 @@ export default class AccountScreen extends React.Component {
                             <Text style={styles.label}>Sexe</Text>
                             <Picker
                                 style={styles.textInput}
-                                selectedValue={this.state.gender}
+                                selectedValue={this.state.user.gender}
                                 onValueChange={(gender) => this.setState({gender})}
                             >
                                 {
@@ -210,7 +247,7 @@ export default class AccountScreen extends React.Component {
                             <Text style={styles.label}>Localisation</Text>
                             <Picker
                                 style={styles.textInput}
-                                selectedValue={this.state.city}
+                                selectedValue={this.state.user.city}
                                 onValueChange={(city) => this.setState({city})}
                             >
                                 {
@@ -223,7 +260,7 @@ export default class AccountScreen extends React.Component {
                             <Text style={styles.label}>Courte description</Text>
                             <TextInput
                                 style={styles.textInput}
-                                value={this.state.description}
+                                value={this.state.user.description}
                                 multiline
                                 onChangeText={(description) => this.setState({description})}/>
                         </View>
@@ -231,7 +268,7 @@ export default class AccountScreen extends React.Component {
                             <Text style={styles.label}>Age minimum recherché</Text>
                             <TextInput
                                 style={styles.textInput}
-                                value={this.state.age_min ? this.state.age_min.toString() : ""}
+                                value={this.state.user.age_min ? this.state.user.age_min.toString() : ""}
                                 keyboardType="numeric"
                                 onChangeText={(age) => this.setState({age_min: parseInt(age)})}/>
                         </View>
@@ -239,7 +276,7 @@ export default class AccountScreen extends React.Component {
                             <Text style={styles.label}>Age maximum recherché</Text>
                             <TextInput
                                 style={styles.textInput}
-                                value={this.state.age_max ? this.state.age_max.toString(): ""}
+                                value={this.state.user.age_max ? this.state.user.age_max.toString(): ""}
                                 keyboardType="numeric"
                                 onChangeText={(age) => this.setState({age_max: parseInt(age)})}/>
                         </View>
@@ -247,7 +284,7 @@ export default class AccountScreen extends React.Component {
                             <Text style={styles.label}>Sexe recherché</Text>
                             <Picker
                                 style={styles.textInput}
-                                selectedValue={this.state.target_gender}
+                                selectedValue={this.state.user.target_gender}
                                 onValueChange={(target_gender) => this.setState({target_gender})}
                             >
                                 {
@@ -257,15 +294,7 @@ export default class AccountScreen extends React.Component {
                             { this.state.target_genderError && <Text style={{color: "red"}}>{this.state.target_genderError}</Text> }
                         </View>
                     </ScrollView>
-                    { this.state.error && <Text style={{color: 'red'}}>{this.state.error}</Text>}
-                    <TouchableOpacity style={styles.button} onPress={this._validate.bind(this)}>
-                        <Text style={styles.buttonText}>Enregitrer les modifications</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.button} onPress={this._signOutAsync.bind(this)}>
-                        <Text style={styles.buttonText}>Se deconnecter</Text>
-                    </TouchableOpacity>
-                </KeyboardAvoidingView>
-                }
+                </KeyboardAvoidingView>}
             </View>
         );
     }

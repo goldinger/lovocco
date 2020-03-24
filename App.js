@@ -3,18 +3,16 @@ import { createAppContainer, createSwitchNavigator } from 'react-navigation';
 import { createBottomTabNavigator } from 'react-navigation-tabs';
 import { createStackNavigator } from 'react-navigation-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import AccountScreen from './src/screens/AccountScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import SwipeScreen from './src/screens/SwipeScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import AuthLoadingScreen from './src/screens/AuthLoadingScreen';
-import InitScreen from './src/screens/InitScreen';
-
+import AccountStack from './src/AccountStack';
 
 
 const AppStack = createBottomTabNavigator({
-        Account: AccountScreen,
+        Account: AccountStack,
         Swipe: SwipeScreen,
         Chat: ChatScreen
     },
@@ -47,7 +45,7 @@ const AuthStack = createStackNavigator({SignIn: SignInScreen, SignUp: SignUpScre
 export default createAppContainer(
     createSwitchNavigator(
         {
-            Init: InitScreen,
+            // Init: InitScreen,
             AuthLoading: AuthLoadingScreen,
             App: AppStack,
             Auth: AuthStack,

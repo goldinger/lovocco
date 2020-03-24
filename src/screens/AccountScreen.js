@@ -5,17 +5,18 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    Image,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
-import AsyncStorage from '@react-native-community/async-storage/types';
+import AsyncStorage from '@react-native-community/async-storage';
 import DatePicker from 'react-native-datepicker';
-import ImagePicker from 'react-native-image-picker/lib/typescript';
-import { X_API_URL } from 'react-native-dotenv';
-import Toast from 'react-native-root-toast/index';
+import ImagePicker from 'react-native-image-picker';
+import { X_API_URL, X_MEDIA_URL } from 'react-native-dotenv';
+import Toast from 'react-native-root-toast';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import PhotoGallery from '../../components/PhotoGalery';
+import PhotoGallery from '../components/PhotoGalery';
 
 
 export default class AccountScreen extends React.Component {

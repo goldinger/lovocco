@@ -1,4 +1,4 @@
-import {Dimensions, Image, TouchableOpacity, View} from 'react-native';
+import {Dimensions, Image, Text, TouchableOpacity, View} from 'react-native';
 import React from 'react';
 import PropTypes from 'prop-types';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -8,11 +8,11 @@ const WIDTH = Dimensions.get('window').width;
 
 
 class GalleryImage extends React.Component {
-
+    
     onPress() {
         const { uri, id } = this.props;
     }
-
+    
     render() {
         const { uri } = this.props;
         return (

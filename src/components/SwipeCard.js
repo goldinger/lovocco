@@ -45,23 +45,31 @@ class SwipeCard extends React.Component {
     }
 
     render() {
+        let currentPhotoIndex = this.state.currentPhotoIndex;
         return <View style={{ flex: 1, height: null, width: null, resizeMode: 'cover', borderRadius: 20 }}>
             <Image
                 style={{ flex: 1, height: null, width: null, resizeMode: 'cover', borderRadius: 20 }}
                 source={{uri: this.state.photos[this.state.currentPhotoIndex]}} />
-            <LinearGradient colors={['transparent', 'rgba(0,0,0,1)']} style={{borderRadius: 20, position: "absolute", bottom: 0, width:'100%', height: '40%'}} />
+
+            <LinearGradient colors={['rgba(0,0,0,0.2)', 'transparent' ]} style={{borderTopLeftRadius: 20, borderTopRightRadius: 20, position: "absolute", top: 0, width:'100%', height: 20}} />
+            <View style={{flexDirection: "row", position: "absolute", top:0, width: '100%', paddingHorizontal: 15 , paddingVertical: 5}}>
+                {this.state.photos.map((item, index) => (
+                    <View style={{backgroundColor: "white", opacity: index === currentPhotoIndex ? 0.7 : 0.3, height: 5, flex: 1, marginHorizontal: 1, borderRadius: 3}} />
+                ))}
+            </View>
+            <LinearGradient colors={['transparent', 'rgba(0,0,0,1)']} style={{borderBottomLeftRadius: 20, borderBottomRightRadius: 20, position: "absolute", bottom: 0, width:'100%', height: '40%'}} />
             <TouchableOpacity style={{position: "absolute", left:0, top:0, width:'50%', height: '80%'}} onPress={this.onClickLeft.bind(this)} />
             <TouchableOpacity style={{position: "absolute", right:0, top:0, width:'50%', height: '80%'}} onPress={this.onClickRight.bind(this)} />
             <TouchableOpacity style={{position: "absolute", bottom: 0, width:'100%', height: '20%', padding: 15}} onPress={this.onClickBottom.bind(this)}>
-                    <Text style={{fontSize: 25, color: "white", fontWeight: "bold"}}>{this.props.name}, {this.props.age}</Text>
-                    <Text style={{fontSize: 15, color: "white"}}>{this.props.description}</Text>
+                <Text style={{fontSize: 25, color: "white", fontWeight: "bold"}}>{this.props.name}, {this.props.age}</Text>
+                <Text style={{fontSize: 15, color: "white"}}>{this.props.description}</Text>
             </TouchableOpacity>
         </View>
     }
 }
 
 SwipeCard.propTypes = {
-    ps: PropTypes.list,
+    photos: PropTypes.list,
     name: PropTypes.string,
     age: PropTypes.number,
     description: PropTypes.string

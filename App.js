@@ -3,11 +3,11 @@ import { createAppContainer, createSwitchNavigator } from 'react-navigation';
 import { createBottomTabNavigator } from 'react-navigation-tabs';
 import { createStackNavigator } from 'react-navigation-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import ChatScreen from './src/screens/ChatScreen';
-import SwipeScreen from './src/screens/SwipeScreen';
-import SignInScreen from './src/screens/SignInScreen';
-import SignUpScreen from './src/screens/SignUpScreen';
-import AuthLoadingScreen from './src/screens/AuthLoadingScreen';
+import ChatScreen from './src/screens/Chat/ChatScreen';
+import SwipeScreen from './src/screens/Swipe/SwipeScreen';
+import SignInScreen from './src/screens/Authentication/SignInScreen';
+import SignUpScreen from './src/screens/Authentication/SignUpScreen';
+import AuthLoadingScreen from './src/screens/Authentication/AuthLoadingScreen';
 import AccountStack from './src/AccountStack';
 
 
@@ -45,8 +45,7 @@ const AuthStack = createStackNavigator({SignIn: SignInScreen, SignUp: SignUpScre
 export default createAppContainer(
     createSwitchNavigator(
         {
-            // Init: InitScreen,
-            AuthLoading: AuthLoadingScreen,
+            AuthLoading: AuthLoadingScreen, // verify if user token exists and redirect to the right stack
             App: AppStack,
             Auth: AuthStack,
         },

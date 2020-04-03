@@ -5,7 +5,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    Image,
     TextInput,
     TouchableOpacity,
     View,
@@ -15,8 +14,8 @@ import DatePicker from 'react-native-datepicker';
 import ImagePicker from 'react-native-image-picker';
 import { X_API_URL, X_MEDIA_URL } from 'react-native-dotenv';
 import Toast from 'react-native-root-toast';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import PhotoGallery from '../components/PhotoGalery';
+import Icon from 'react-native-vector-icons/Ionicons';
+import PhotoGallery from '../../components/PhotoGalery';
 
 
 export default class AccountScreen extends React.Component {
@@ -24,12 +23,12 @@ export default class AccountScreen extends React.Component {
     static navigationOptions = ({navigation}) => ({
         headerLeft: <View style={{flexDirection: "row",justifyContent: "flex-end",paddingLeft:15}}>
             <TouchableOpacity onPress={navigation.getParam('_signOut')}>
-                <Icon type="font-awesome" name="power-off" size={30} color="gray" />
+                <Icon type="font-awesome" name="ios-power" size={30} color="gray" />
             </TouchableOpacity>
         </View>,
         headerRight: <View style={{flexDirection: "row",justifyContent: "flex-end",paddingRight:15}}>
             <TouchableOpacity onPress={navigation.getParam('_validate')}>
-                <Icon type="font-awesome" name="check" size={30} color="gray" />
+                <Icon type="font-awesome" name="ios-save" size={30} color="gray" />
             </TouchableOpacity>
         </View>
     });
@@ -112,6 +111,10 @@ export default class AccountScreen extends React.Component {
         this.props.navigation.setParams({_validate: this._validate.bind(this), _signOut: this._signOutAsync.bind(this)})
     }
 
+    componentWillUnmount() {
+        this._validate()
+    }
+
     _validate() {
         if (this.state.userToken) {
             let body = {
@@ -148,7 +151,7 @@ export default class AccountScreen extends React.Component {
         }
     }
 
-    createFormData(photo) {
+    static createFormData(photo) {
         const data = new FormData();
 
         data.append('image', {
@@ -181,7 +184,7 @@ export default class AccountScreen extends React.Component {
                         'Content-Type': 'multipart/form-data',
                         'Authorization': 'Token ' + component.state.userToken
                     },
-                    body: this.createFormData(photo)
+                    body: AccountScreen.createFormData(photo)
                 })
                     .then(response => {
                         if (response.status === 200) {
@@ -198,6 +201,12 @@ export default class AccountScreen extends React.Component {
     }
 
 
+    set_user(key, value){
+        let user = this.state.user;
+        user[key] = value;
+        this.setState({user})
+    }
+
 
     render() {
         return (
@@ -205,13 +214,17 @@ export default class AccountScreen extends React.Component {
                 { this.state.error && <Text style={{color: 'red'}}>{this.state.error}</Text>}
                 { this.state.user && <KeyboardAvoidingView style={styles.container}>
                     <ScrollView style={{width: '100%'}} contentContainerStyle={{alignItems: 'center'}}>
-                        {this.state.photos && <PhotoGallery photos={this.state.photos} onPressAdd={this._add_photo.bind(this)}/>}
+                        {this.state.photos && <PhotoGallery
+                            refresh={this.refresh.bind(this)}
+                            navigation={this.props.navigation}
+                            photos={this.state.photos}
+                            onPressAdd={this._add_photo.bind(this)}/>}
                         <View>
                             <Text style={styles.label}>Prénom</Text>
                             <TextInput
                                 style={styles.textInput}
                                 value={this.state.user.name}
-                                onChangeText={(name) => this.setState({name})}/>
+                                onChangeText={(name) => this.set_user('name', name)}/>
                         </View>
                         <View>
                             <Text style={styles.label}>Date de naissance</Text>
@@ -227,7 +240,7 @@ export default class AccountScreen extends React.Component {
                                 mode="date"
                                 confirmBtnText="Confirmer"
                                 cancelBtnText="Annuler"
-                                onDateChange={(birth_date) => {this.setState({birth_date})}}/>
+                                onDateChange={birth_date => this.set_user('birth_date', birth_date)}/>
                         </View>
 
                         <View>
@@ -235,7 +248,7 @@ export default class AccountScreen extends React.Component {
                             <Picker
                                 style={styles.textInput}
                                 selectedValue={this.state.user.gender}
-                                onValueChange={(gender) => this.setState({gender})}
+                                onValueChange={(gender) => this.set_user('gender', gender)}
                             >
                                 {
                                     this.state.genderList.map(item => <Picker.Item key={item.id} label={item.label} value={item.id}/>)
@@ -249,7 +262,7 @@ export default class AccountScreen extends React.Component {
                             <Picker
                                 style={styles.textInput}
                                 selectedValue={this.state.user.city}
-                                onValueChange={(city) => this.setState({city})}
+                                onValueChange={(city) => this.set_user('city', city)}
                             >
                                 {
                                     this.state.cityList.map(item => <Picker.Item key={item.id} label={item.name} value={item.id}/>)
@@ -263,7 +276,7 @@ export default class AccountScreen extends React.Component {
                                 style={styles.textInput}
                                 value={this.state.user.description}
                                 multiline
-                                onChangeText={(description) => this.setState({description})}/>
+                                onChangeText={(description) => this.set_user('description', description)}/>
                         </View>
                         <View>
                             <Text style={styles.label}>Age minimum recherché</Text>
@@ -271,7 +284,7 @@ export default class AccountScreen extends React.Component {
                                 style={styles.textInput}
                                 value={this.state.user.age_min ? this.state.user.age_min.toString() : ""}
                                 keyboardType="numeric"
-                                onChangeText={(age) => this.setState({age_min: parseInt(age)})}/>
+                                onChangeText={(age) => this.set_user('age', age)}/>
                         </View>
                         <View>
                             <Text style={styles.label}>Age maximum recherché</Text>
@@ -279,14 +292,14 @@ export default class AccountScreen extends React.Component {
                                 style={styles.textInput}
                                 value={this.state.user.age_max ? this.state.user.age_max.toString(): ""}
                                 keyboardType="numeric"
-                                onChangeText={(age) => this.setState({age_max: parseInt(age)})}/>
+                                onChangeText={(age) => this.set_user('age_max', parseInt(age))}/>
                         </View>
                         <View>
                             <Text style={styles.label}>Sexe recherché</Text>
                             <Picker
                                 style={styles.textInput}
                                 selectedValue={this.state.user.target_gender}
-                                onValueChange={(target_gender) => this.setState({target_gender})}
+                                onValueChange={(target_gender) => this.set_user('target_gender', target_gender)}
                             >
                                 {
                                     this.state.genderList.map(item => <Picker.Item key={item.id} label={item.label} value={item.id}/>)

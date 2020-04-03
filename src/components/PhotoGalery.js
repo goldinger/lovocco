@@ -8,15 +8,10 @@ const WIDTH = Dimensions.get('window').width;
 
 
 class GalleryImage extends React.Component {
-    
-    onPress() {
-        const { uri, id } = this.props;
-    }
-    
     render() {
         const { uri } = this.props;
         return (
-            <TouchableOpacity onPress={this.onPress.bind(this)}
+            <TouchableOpacity onPress={this.props.onPress}
                 style={{
                     backgroundColor: 'transparent',
                     borderRadius: 0,
@@ -43,6 +38,11 @@ class GalleryImage extends React.Component {
 
 
 export default class PhotoGallery extends React.Component {
+
+    onPhotoPress(photo){
+        this.props.navigation.navigate('Photo', {photo, refresh: this.props.refresh});
+    }
+
     render() {
         const {photos, onPressAdd} = this.props;
         return <View
@@ -52,7 +52,9 @@ export default class PhotoGallery extends React.Component {
                 paddingHorizontal: WIDTH/8 - 3,
             }}
         >
-            { photos.map((item) => <GalleryImage key={item.id} photoId={item.id} uri={X_MEDIA_URL + item.image} />) }
+            { photos.map((item) => <GalleryImage onPress={() => this.onPhotoPress(item)}
+                                                 key={item.id} photoId={item.id}
+                                                 uri={X_MEDIA_URL + item.image} />) }
             { (photos.length < 6) && <TouchableOpacity
                 onPress={onPressAdd}
                 style={{backgroundColor: 'gray', height: WIDTH / 4, width: WIDTH / 4, justifyContent: 'center', alignItems: 'center'}}>
